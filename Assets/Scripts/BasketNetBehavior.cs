@@ -36,6 +36,7 @@ public class BasketNetBehavior : MonoBehaviour
         if (other.gameObject.CompareTag(Ball) && _ballEnter)
         {
             _ballEnter = false;
+            GameplayManager.BallEntered?.Invoke();
             Debug.Log("BasketNetBehavior OnCollisionExit Score!");
         }
     }
