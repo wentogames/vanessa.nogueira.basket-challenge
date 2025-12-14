@@ -8,14 +8,14 @@ public class GameplayManager : MonoBehaviour
     [SerializeField] private GameObject basketBall;
     [SerializeField] private Rigidbody basketBallRb;
     [SerializeField] private CapsuleCollider netCollider;
-    [SerializeField] private MeshCollider hoopCollider;
+    [SerializeField] private BoxCollider hoopCollider;
 
     //Throw force for a perfect 3 points shoot (ball at (0, 1.8, 4.45) start position): (0, 41, 18)
     private Vector3 ThrowForce3Pts = new Vector3(0, 41, 18);
     //Throw force for a perfect 2 points shoot (ball at (0, 1.8, 6.45) start position): (0, 41, 11.5)
     private Vector3 ThrowForce2Pts = new Vector3(0, 41, 11.5f);
     //ThrowForceMultiplier for the perfect throws: 10f
-    private float ThrowForceMultiplier = 12f;
+    private float ThrowForceMultiplier = 10f;
 
     private bool _ballThrew = false;
     private bool _ballEntered = false;
@@ -25,37 +25,41 @@ public class GameplayManager : MonoBehaviour
     private readonly Vector3 PlayerCenterInitialPos = new Vector3(0, 0, 3.85f);
     private readonly Vector3 PlayerLeftInitialPos = new Vector3(0, 0, 3.85f);
     private readonly Vector3 PlayerRightInitialPos = new Vector3(0, 0, 3.85f);
+    private readonly Vector3 BallCenterInitialPos = new Vector3(0, 1.8f, 4.45f);
 
     private const float MaxThrowDuration = 2.5f;
 
     public static Action BallEntered;
     public static Action RingTouched;
     public static Action ThrowEnd;
-    
+    public static Action<float> ForceAmount;
+
+    public const float ClickDragMultiplier = 14.28f; //ThrowForceMultiplier divided by the 0.7 of the fillAmount meter
     
     
     // Start is called before the first frame update
     void Start()
     {
-        ThrowBall(0);
-
+        basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
         BallEntered += BallEnter;
         RingTouched += RingTouch;
         ThrowEnd += Outcome;
+        ForceAmount += ThrowBall;
     }
 
     private void ThrowBall(float force)
     {
+        basketBallRb.constraints = RigidbodyConstraints.None;
         _ballThrew = true;
         _throwTime = Time.time;
-        basketBallRb.AddForce(ThrowForce3Pts * ThrowForceMultiplier);
+        basketBallRb.AddForce(ThrowForce3Pts * (force * ClickDragMultiplier));
     }
 
     private void Update()
     {
         if (Time.time - _throwTime > MaxThrowDuration && _ballThrew)
         {
-            Reset();
+            //Reset();
             Debug.Log("GameplayManager Wrong shot (time out)!");
         }
     }
@@ -91,14 +95,14 @@ public class GameplayManager : MonoBehaviour
         {
             Debug.Log("GameplayManager Wrong shot!");
         }
-
-        Reset();
     }
 
-    private void Reset()
+    public void Reset()
     {
         _ballThrew = false;
         _ballEntered = false;
         _ringTouched = false;
+        basketBall.transform.position = BallCenterInitialPos;
+        basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
     }
 }
