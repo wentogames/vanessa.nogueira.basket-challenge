@@ -27,25 +27,51 @@ public class ScreenManager : MonoBehaviour
 
     private const float Margin = 300f;
     private const float AnimDuration = 1f;
+    private const float ScreenSizeThreshold = 50f;
 
     private void Start()
     {
         DOTween.Init();
+        SetMeasures();
+
+        screensRT[(int)Screens.MainMenu].DOMove(_finalPosition, AnimDuration, true);
+    }
+
+    private void Update()
+    {
+        if (Math.Abs(_screenWidth - Screen.width) > ScreenSizeThreshold || Math.Abs(_screenHeight - Screen.height) > ScreenSizeThreshold)
+        {
+            SetMeasures();
+            
+            foreach (var screen in screensRT)
+            {
+                if(screen.gameObject.activeSelf)
+                {
+                    screen.sizeDelta = new Vector2(_screenWidth, _screenHeight);
+                    screen.anchoredPosition = Vector2.zero;
+                }
+            }
+        }
+    }
+
+    private void SetMeasures()
+    {
         _screenWidth = Screen.width;
         _screenHeight = Screen.height;
         _initialPosition = new Vector2(0, (-_screenHeight -Margin));
         _finalPosition = new Vector2(_screenWidth/2, _screenHeight/2);
+        Debug.Log($"ScreenManager SetMeasures width: {_screenWidth}, height: {_screenHeight}");
         
         foreach (var screen in screensRT)
         {
             SetInitialPosition(screen);
         }
-        
-        screensRT[(int)Screens.MainMenu].DOMove(_finalPosition, AnimDuration, true);
     }
 
     private void SetInitialPosition(RectTransform screen)
     {
+        screen.sizeDelta = new Vector2(_screenWidth, _screenHeight);
+        screen.pivot = new Vector2(0.5f, 0.5f);
         screen.anchoredPosition = new Vector2(0, (-_screenHeight -Margin));
     }
 
