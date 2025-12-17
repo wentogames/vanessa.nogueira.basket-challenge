@@ -84,10 +84,12 @@ public class GameplayManager : MonoBehaviour
         {
             if (!_ringTouched)
             {
+                ScoreManager.ThrowScored?.Invoke(true);
                 Debug.Log("GameplayManager Perfect score!");
             }
             else
             {
+                ScoreManager.ThrowScored?.Invoke(false);
                 Debug.Log("GameplayManager Not-perfect score!");
             }
         }
@@ -95,6 +97,8 @@ public class GameplayManager : MonoBehaviour
         {
             Debug.Log("GameplayManager Wrong shot!");
         }
+
+        _ballThrew = false;
     }
 
     public void Reset()
