@@ -28,8 +28,8 @@ public class GameplayManager : MonoBehaviour
     private readonly Dictionary<Vector3, Vector3> _positionRotationDict = new Dictionary<Vector3, Vector3>()
     {
         { new Vector3(0, 0, 3.85f), Vector3.zero },
-        { new Vector3(-3.29f, 0, 4.9f), new Vector3(0, 30, 0) },
-        { new Vector3(5.5f, 0, 7.1f), new Vector3(0, -60, 0) },
+        { new Vector3(-3.29f, 0, 4.9f), new Vector3(0, 32.5f, 0) },
+        { new Vector3(5.5f, 0, 7.1f), new Vector3(0, -62.5f, 0) },
     };
 
     private readonly Vector3 _ballInitialPosition = new Vector3(0, 1.8f, 0.6f);
