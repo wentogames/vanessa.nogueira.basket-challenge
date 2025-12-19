@@ -63,7 +63,7 @@ public class GameplayManager : MonoBehaviour
     public static Action RingTouched;
     public static Action BackboardTouched;
     public static Action ThrowEnd;
-    public static Action<float> ForceAmount;
+    public static Action<float, float> ForceAmount;
 
     public static Action StopCameraBall;
 
@@ -110,13 +110,16 @@ public class GameplayManager : MonoBehaviour
         ChangeCamera(false);
     }
     
-    private void ThrowBall(float force)
+    private void ThrowBall(float force, float xForce)
     {
         if (!_canLoadToThrow) return;
         basketBallRb.constraints = RigidbodyConstraints.None;
         _ballThrew = true;
         _throwTime = Time.time;
-        basketBallRb.AddRelativeForce(ThrowForce3Pts * (force * ClickDragMultiplier));
+
+        Vector3 directionForce = new Vector3(xForce, ThrowForce3Pts.y, ThrowForce3Pts.z);
+        
+        basketBallRb.AddRelativeForce(directionForce * (force * ClickDragMultiplier));
         ChangeCamera(true);
         _canLoadToThrow = false;
     }
