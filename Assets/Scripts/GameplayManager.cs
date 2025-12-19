@@ -7,18 +7,23 @@ using Random = UnityEngine.Random;
 
 public class GameplayManager : MonoBehaviour
 {
+    [Header("3D Objects")]
     [SerializeField] private GameObject player;
     [SerializeField] private GameObject basketBall;
     [SerializeField] private Rigidbody basketBallRb;
     [SerializeField] private CapsuleCollider netCollider;
     [SerializeField] private BoxCollider hoopCollider;
 
+    [Header("Cameras")]
+    [SerializeField] private GameObject gameCamera;
+    [SerializeField] private GameObject ballCamera;
+    
     [Header("Bonus")]
     [SerializeField] private Material bonusMaterial;
-    [SerializeField] private Texture rareBonusTexture;
-    [SerializeField] private Texture uncommonBonusTexture;
-    [SerializeField] private Texture commonBonusTexture;
     [SerializeField] private Texture noBonusTexture;
+    [SerializeField] private Texture commonTexture;
+    [SerializeField] private Texture uncommonTexture;
+    [SerializeField] private Texture rareTexture;
     
 
     //Throw force for a perfect 3 points shoot (ball at (0, 1.8, 4.45) start position): (0, 41, 18)
@@ -28,47 +33,51 @@ public class GameplayManager : MonoBehaviour
     //ThrowForceMultiplier for the perfect throws: 10f
     private float ThrowForceMultiplier = 10f;
 
+    private bool _canLoadToThrow = true;
     private bool _ballThrew = false;
     private bool _ballEntered = false;
     private bool _ringTouched = false;
+    private bool _backboardTouched = false;
     private float _throwTime;
+    private bool _firstThrow = true;
+    private int _bonusPoints = 0;
 
     private readonly Dictionary<Vector3, Vector3> _positionRotationDict = new Dictionary<Vector3, Vector3>()
     {
         { new Vector3(0, 0, 3.85f), Vector3.zero },
-        { new Vector3(-3.29f, 0, 4.9f), new Vector3(0, 30, 0) },
-        { new Vector3(5.5f, 0, 7.1f), new Vector3(0, -60, 0) },
+        { new Vector3(-3.29f, 0, 4.9f), new Vector3(0, 32.5f, 0) },
+        { new Vector3(5.5f, 0, 7.1f), new Vector3(0, -62.5f, 0) },
     };
 
     private readonly Vector3 _ballInitialPosition = new Vector3(0, 1.8f, 0.6f);
+    private readonly Vector3 _ballCameraInitialPosition = new Vector3(0, 4.35f, -12f);
+    private readonly Vector3 _ballCameraInitialRotation = new Vector3(15, 0, 0);
 
-    private bool _firstThrow = true;
-    private bool _getBonus = false;
 
     private const float ClickDragMultiplier = 14.28f; //ThrowForceMultiplier divided by the 0.7 of the fillAmount meter
     private const float MaxThrowDuration = 2.5f;
     private const int InitialPosition = 0;
-
-    private const int BonusRare = 8;
-    private const int BonusUncommon = 6;
-    private const int BonusCommon = 4;
-    private const int NoBonus = 0;
+    private const string MainTex = "_MainTex";
 
     public static Action BallEntered;
     public static Action RingTouched;
+    public static Action BackboardTouched;
     public static Action ThrowEnd;
     public static Action<float> ForceAmount;
 
-    
-    
+    public static Action StopCameraBall;
+
+
     // Start is called before the first frame update
     void Start()
     {
         basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
         BallEntered += BallEnter;
         RingTouched += RingTouch;
+        BackboardTouched += BackboardTouch;
         ThrowEnd += Outcome;
         ForceAmount += ThrowBall;
+        StopCameraBall += StopFollowingBall;
         RandomizePosition();
     }
 
@@ -76,7 +85,6 @@ public class GameplayManager : MonoBehaviour
     {
         if (Time.time - _throwTime > MaxThrowDuration && _ballThrew)
         {
-            //Reset();
             Debug.Log("GameplayManager Wrong shot (time out)!");
         }
     }
@@ -99,20 +107,30 @@ public class GameplayManager : MonoBehaviour
         player.transform.rotation = Quaternion.Euler(_positionRotationDict.Values.ElementAt(index));
         basketBall.transform.localPosition = _ballInitialPosition;
         basketBall.transform.localRotation = Quaternion.Euler(Vector3.zero);
+        ChangeCamera(false);
     }
     
     private void ThrowBall(float force)
     {
+        if (!_canLoadToThrow) return;
         basketBallRb.constraints = RigidbodyConstraints.None;
         _ballThrew = true;
         _throwTime = Time.time;
         basketBallRb.AddRelativeForce(ThrowForce3Pts * (force * ClickDragMultiplier));
+        ChangeCamera(true);
+        _canLoadToThrow = false;
     }
 
     private void RingTouch()
     {
         _ringTouched = true;
         Debug.Log("GameplayManager RingTouched");
+    }
+
+    private void BackboardTouch()
+    {
+        _backboardTouched = true;
+        Debug.Log("GameplayManager BackboardTouched");
     }
     
     private void BallEnter()
@@ -137,6 +155,11 @@ public class GameplayManager : MonoBehaviour
                 ScoreManager.ThrowScored?.Invoke(false);
                 Debug.Log("GameplayManager Not-perfect score!");
             }
+
+            if (_backboardTouched && _bonusPoints > 0)
+            {
+                ScoreManager.BonusScored?.Invoke(_bonusPoints);
+            }
         }
         else
         {
@@ -146,48 +169,62 @@ public class GameplayManager : MonoBehaviour
         _ballThrew = false;
     }
 
+    private void StopFollowingBall()
+    {
+        ballCamera.transform.SetParent(player.transform);
+    }
+
+    private void ChangeCamera(bool toBallCamera)
+    {
+        gameCamera.SetActive(!toBallCamera);
+        ballCamera.SetActive(toBallCamera);
+    }
+
     public void Reset()
     {
+        _canLoadToThrow = true;
         _ballThrew = false;
         _ballEntered = false;
         _ringTouched = false;
         RandomizePosition();
         basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
+        ballCamera.transform.SetParent(basketBall.transform);
+        ballCamera.transform.localPosition = _ballCameraInitialPosition;
+        ballCamera.transform.localRotation = Quaternion.Euler(_ballCameraInitialRotation);
 
-        int bonus = BackboardBonus();
-        
+        _bonusPoints = BonusPointRandomizer();
     }
 
-    private int BackboardBonus()
+    private int BonusPointRandomizer()
     {
-        //80% chance no bonus, 20% chance bonus
-        //on these 20%, 60% is 4 points, 30% is 6 points and 10% is 8 points
+        //80% chance of getting no bonus, 20% chance of getting a bonus
+        //of that 40%, 60% is a 4 points bonus, 30% is a 6 points bonus and 10% is a 8 points bonus
         int bonus = 0;
-        bonusMaterial.SetTexture("_MainTex", noBonusTexture);
-        
+        bonusMaterial.SetTexture(MainTex, noBonusTexture);
+
         int getBonus = Random.Range(0, 10);
         if (getBonus >= 8)
         {
-            //bonus activated
-            int bonusPoints = Random.Range(0, 10);
+            int extraPoints = Random.Range(0, 10);
 
-            if (bonusPoints < 1)
+            if (extraPoints < 6)
             {
-                bonus = 8;
-                bonusMaterial.SetTexture("_MainTex", rareBonusTexture);
+                bonus = 4;
+                bonusMaterial.SetTexture(MainTex, commonTexture);
             }
-            else if (bonusPoints < 4)
+            else if (extraPoints < 9)
             {
                 bonus = 6;
-                bonusMaterial.SetTexture("_MainTex", uncommonBonusTexture);
+                bonusMaterial.SetTexture(MainTex, uncommonTexture);
             }
             else
             {
-                bonus = 4;
-                bonusMaterial.SetTexture("_MainTex", commonBonusTexture);
+                bonus = 8;
+                bonusMaterial.SetTexture(MainTex, rareTexture);
             }
         }
-        Debug.Log($"GameplayManager BackboardBonus: {bonus} points");
+
+        Debug.Log($"GameplayManager BonusPointRandomizer getting {bonus} extra points");
         return bonus;
     }
 }
