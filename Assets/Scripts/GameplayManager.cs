@@ -13,6 +13,14 @@ public class GameplayManager : MonoBehaviour
     [SerializeField] private CapsuleCollider netCollider;
     [SerializeField] private BoxCollider hoopCollider;
 
+    [Header("Bonus")]
+    [SerializeField] private Material bonusMaterial;
+    [SerializeField] private Texture rareBonusTexture;
+    [SerializeField] private Texture uncommonBonusTexture;
+    [SerializeField] private Texture commonBonusTexture;
+    [SerializeField] private Texture noBonusTexture;
+    
+
     //Throw force for a perfect 3 points shoot (ball at (0, 1.8, 4.45) start position): (0, 41, 18)
     private Vector3 ThrowForce3Pts = new Vector3(0, 41, 18);
     //Throw force for a perfect 2 points shoot (ball at (0, 1.8, 6.45) start position): (0, 41, 11.5)
@@ -35,10 +43,16 @@ public class GameplayManager : MonoBehaviour
     private readonly Vector3 _ballInitialPosition = new Vector3(0, 1.8f, 0.6f);
 
     private bool _firstThrow = true;
+    private bool _getBonus = false;
 
     private const float ClickDragMultiplier = 14.28f; //ThrowForceMultiplier divided by the 0.7 of the fillAmount meter
     private const float MaxThrowDuration = 2.5f;
     private const int InitialPosition = 0;
+
+    private const int BonusRare = 8;
+    private const int BonusUncommon = 6;
+    private const int BonusCommon = 4;
+    private const int NoBonus = 0;
 
     public static Action BallEntered;
     public static Action RingTouched;
@@ -139,5 +153,41 @@ public class GameplayManager : MonoBehaviour
         _ringTouched = false;
         RandomizePosition();
         basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
+
+        int bonus = BackboardBonus();
+        
+    }
+
+    private int BackboardBonus()
+    {
+        //80% chance no bonus, 20% chance bonus
+        //on these 20%, 60% is 4 points, 30% is 6 points and 10% is 8 points
+        int bonus = 0;
+        bonusMaterial.SetTexture("_MainTex", noBonusTexture);
+        
+        int getBonus = Random.Range(0, 10);
+        if (getBonus >= 8)
+        {
+            //bonus activated
+            int bonusPoints = Random.Range(0, 10);
+
+            if (bonusPoints < 1)
+            {
+                bonus = 8;
+                bonusMaterial.SetTexture("_MainTex", rareBonusTexture);
+            }
+            else if (bonusPoints < 4)
+            {
+                bonus = 6;
+                bonusMaterial.SetTexture("_MainTex", uncommonBonusTexture);
+            }
+            else
+            {
+                bonus = 4;
+                bonusMaterial.SetTexture("_MainTex", commonBonusTexture);
+            }
+        }
+        Debug.Log($"GameplayManager BackboardBonus: {bonus} points");
+        return bonus;
     }
 }
