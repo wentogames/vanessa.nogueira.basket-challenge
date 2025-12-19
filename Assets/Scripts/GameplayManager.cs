@@ -7,11 +7,17 @@ using Random = UnityEngine.Random;
 
 public class GameplayManager : MonoBehaviour
 {
+    [Header("3D Objects")]
     [SerializeField] private GameObject player;
     [SerializeField] private GameObject basketBall;
     [SerializeField] private Rigidbody basketBallRb;
     [SerializeField] private CapsuleCollider netCollider;
     [SerializeField] private BoxCollider hoopCollider;
+
+    [Header("Cameras")]
+    [SerializeField] private GameObject gameCamera;
+    [SerializeField] private GameObject ballCamera;
+    
 
     //Throw force for a perfect 3 points shoot (ball at (0, 1.8, 4.45) start position): (0, 41, 18)
     private Vector3 ThrowForce3Pts = new Vector3(0, 41, 18);
@@ -28,11 +34,13 @@ public class GameplayManager : MonoBehaviour
     private readonly Dictionary<Vector3, Vector3> _positionRotationDict = new Dictionary<Vector3, Vector3>()
     {
         { new Vector3(0, 0, 3.85f), Vector3.zero },
-        { new Vector3(-3.29f, 0, 4.9f), new Vector3(0, 30, 0) },
-        { new Vector3(5.5f, 0, 7.1f), new Vector3(0, -60, 0) },
+        { new Vector3(-3.29f, 0, 4.9f), new Vector3(0, 32.5f, 0) },
+        { new Vector3(5.5f, 0, 7.1f), new Vector3(0, -62.5f, 0) },
     };
 
     private readonly Vector3 _ballInitialPosition = new Vector3(0, 1.8f, 0.6f);
+    private readonly Vector3 _ballCameraInitialPosition = new Vector3(0, 4.35f, -12f);
+    private readonly Vector3 _ballCameraInitialRotation = new Vector3(15, 0, 0);
 
     private bool _firstThrow = true;
 
@@ -45,8 +53,9 @@ public class GameplayManager : MonoBehaviour
     public static Action ThrowEnd;
     public static Action<float> ForceAmount;
 
-    
-    
+    public static Action StopCameraBall;
+
+
     // Start is called before the first frame update
     void Start()
     {
@@ -55,6 +64,7 @@ public class GameplayManager : MonoBehaviour
         RingTouched += RingTouch;
         ThrowEnd += Outcome;
         ForceAmount += ThrowBall;
+        StopCameraBall += StopFollowingBall;
         RandomizePosition();
     }
 
@@ -85,6 +95,7 @@ public class GameplayManager : MonoBehaviour
         player.transform.rotation = Quaternion.Euler(_positionRotationDict.Values.ElementAt(index));
         basketBall.transform.localPosition = _ballInitialPosition;
         basketBall.transform.localRotation = Quaternion.Euler(Vector3.zero);
+        ChangeCamera(false);
     }
     
     private void ThrowBall(float force)
@@ -93,6 +104,7 @@ public class GameplayManager : MonoBehaviour
         _ballThrew = true;
         _throwTime = Time.time;
         basketBallRb.AddRelativeForce(ThrowForce3Pts * (force * ClickDragMultiplier));
+        ChangeCamera(true);
     }
 
     private void RingTouch()
@@ -132,6 +144,17 @@ public class GameplayManager : MonoBehaviour
         _ballThrew = false;
     }
 
+    private void StopFollowingBall()
+    {
+        ballCamera.transform.SetParent(player.transform);
+    }
+
+    private void ChangeCamera(bool toBallCamera)
+    {
+        gameCamera.SetActive(!toBallCamera);
+        ballCamera.SetActive(toBallCamera);
+    }
+
     public void Reset()
     {
         _ballThrew = false;
@@ -139,5 +162,8 @@ public class GameplayManager : MonoBehaviour
         _ringTouched = false;
         RandomizePosition();
         basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
+        ballCamera.transform.SetParent(basketBall.transform);
+        ballCamera.transform.localPosition = _ballCameraInitialPosition;
+        ballCamera.transform.localRotation = Quaternion.Euler(_ballCameraInitialRotation);
     }
 }
