@@ -14,13 +14,22 @@ public class BasketColliderBehavior : MonoBehaviour
     {
         if (collision.gameObject.CompareTag(Ball) && isFloor)
         {
-            Debug.Log("BasketColliderBehavior OnCollisionEnter RingTouched");
+            Debug.Log("BasketColliderBehavior OnCollisionEnter ThrowEnd");
             GameplayManager.ThrowEnd?.Invoke();
         }
         else if (collision.gameObject.CompareTag(Ball) && !isBackboard && !isFloor)
         {
             Debug.Log("BasketColliderBehavior OnCollisionEnter RingTouched");
             GameplayManager.RingTouched?.Invoke();
+        }
+    }
+
+    private void OnTriggerEnter(Collider other)
+    {
+        if (other.gameObject.CompareTag(Ball) && isBackboard)
+        {
+            Debug.Log("BasketColliderBehavior OnCollisionEnter BackboardTouched");
+            GameplayManager.BackboardTouched?.Invoke();
         }
     }
 }

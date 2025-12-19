@@ -13,16 +13,24 @@ public class ScoreManager : MonoBehaviour
     private const int NotPerfectThrowPoints = 2;
     
     public static Action<bool> ThrowScored;
+    public static Action<int> BonusScored;
     
     // Start is called before the first frame update
     void Start()
     {
         ThrowScored += OnThrowScored;
+        BonusScored += OnBonusScored;
     }
 
     private void OnThrowScored(bool isPerfectThrow)
     {
         _currentScore += isPerfectThrow ? PerfectThrowPoints : NotPerfectThrowPoints;
+        pointsText.text = _currentScore.ToString();
+    }
+    
+    private void OnBonusScored(int bonusPoints)
+    {
+        _currentScore += bonusPoints;
         pointsText.text = _currentScore.ToString();
     }
 }

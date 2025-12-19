@@ -18,6 +18,13 @@ public class GameplayManager : MonoBehaviour
     [SerializeField] private GameObject gameCamera;
     [SerializeField] private GameObject ballCamera;
     
+    [Header("Bonus")]
+    [SerializeField] private Material bonusMaterial;
+    [SerializeField] private Texture noBonusTexture;
+    [SerializeField] private Texture commonTexture;
+    [SerializeField] private Texture uncommonTexture;
+    [SerializeField] private Texture rareTexture;
+    
 
     //Throw force for a perfect 3 points shoot (ball at (0, 1.8, 4.45) start position): (0, 41, 18)
     private Vector3 ThrowForce3Pts = new Vector3(0, 41, 18);
@@ -26,10 +33,14 @@ public class GameplayManager : MonoBehaviour
     //ThrowForceMultiplier for the perfect throws: 10f
     private float ThrowForceMultiplier = 10f;
 
+    private bool _canLoadToThrow = true;
     private bool _ballThrew = false;
     private bool _ballEntered = false;
     private bool _ringTouched = false;
+    private bool _backboardTouched = false;
     private float _throwTime;
+    private bool _firstThrow = true;
+    private int _bonusPoints = 0;
 
     private readonly Dictionary<Vector3, Vector3> _positionRotationDict = new Dictionary<Vector3, Vector3>()
     {
@@ -42,16 +53,17 @@ public class GameplayManager : MonoBehaviour
     private readonly Vector3 _ballCameraInitialPosition = new Vector3(0, 4.35f, -12f);
     private readonly Vector3 _ballCameraInitialRotation = new Vector3(15, 0, 0);
 
-    private bool _firstThrow = true;
 
     private const float ClickDragMultiplier = 14.28f; //ThrowForceMultiplier divided by the 0.7 of the fillAmount meter
     private const float MaxThrowDuration = 2.5f;
     private const int InitialPosition = 0;
+    private const string MainTex = "_MainTex";
 
     public static Action BallEntered;
     public static Action RingTouched;
+    public static Action BackboardTouched;
     public static Action ThrowEnd;
-    public static Action<float> ForceAmount;
+    public static Action<float, float> ForceAmount;
 
     public static Action StopCameraBall;
 
@@ -62,6 +74,7 @@ public class GameplayManager : MonoBehaviour
         basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
         BallEntered += BallEnter;
         RingTouched += RingTouch;
+        BackboardTouched += BackboardTouch;
         ThrowEnd += Outcome;
         ForceAmount += ThrowBall;
         StopCameraBall += StopFollowingBall;
@@ -72,7 +85,6 @@ public class GameplayManager : MonoBehaviour
     {
         if (Time.time - _throwTime > MaxThrowDuration && _ballThrew)
         {
-            //Reset();
             Debug.Log("GameplayManager Wrong shot (time out)!");
         }
     }
@@ -98,19 +110,30 @@ public class GameplayManager : MonoBehaviour
         ChangeCamera(false);
     }
     
-    private void ThrowBall(float force)
+    private void ThrowBall(float force, float xForce)
     {
+        if (!_canLoadToThrow) return;
         basketBallRb.constraints = RigidbodyConstraints.None;
         _ballThrew = true;
         _throwTime = Time.time;
-        basketBallRb.AddRelativeForce(ThrowForce3Pts * (force * ClickDragMultiplier));
+
+        Vector3 directionForce = new Vector3(xForce, ThrowForce3Pts.y, ThrowForce3Pts.z);
+        
+        basketBallRb.AddRelativeForce(directionForce * (force * ClickDragMultiplier));
         ChangeCamera(true);
+        _canLoadToThrow = false;
     }
 
     private void RingTouch()
     {
         _ringTouched = true;
         Debug.Log("GameplayManager RingTouched");
+    }
+
+    private void BackboardTouch()
+    {
+        _backboardTouched = true;
+        Debug.Log("GameplayManager BackboardTouched");
     }
     
     private void BallEnter()
@@ -135,6 +158,11 @@ public class GameplayManager : MonoBehaviour
                 ScoreManager.ThrowScored?.Invoke(false);
                 Debug.Log("GameplayManager Not-perfect score!");
             }
+
+            if (_backboardTouched && _bonusPoints > 0)
+            {
+                ScoreManager.BonusScored?.Invoke(_bonusPoints);
+            }
         }
         else
         {
@@ -157,6 +185,7 @@ public class GameplayManager : MonoBehaviour
 
     public void Reset()
     {
+        _canLoadToThrow = true;
         _ballThrew = false;
         _ballEntered = false;
         _ringTouched = false;
@@ -165,5 +194,40 @@ public class GameplayManager : MonoBehaviour
         ballCamera.transform.SetParent(basketBall.transform);
         ballCamera.transform.localPosition = _ballCameraInitialPosition;
         ballCamera.transform.localRotation = Quaternion.Euler(_ballCameraInitialRotation);
+
+        _bonusPoints = BonusPointRandomizer();
+    }
+
+    private int BonusPointRandomizer()
+    {
+        //80% chance of getting no bonus, 20% chance of getting a bonus
+        //of that 40%, 60% is a 4 points bonus, 30% is a 6 points bonus and 10% is a 8 points bonus
+        int bonus = 0;
+        bonusMaterial.SetTexture(MainTex, noBonusTexture);
+
+        int getBonus = Random.Range(0, 10);
+        if (getBonus >= 8)
+        {
+            int extraPoints = Random.Range(0, 10);
+
+            if (extraPoints < 6)
+            {
+                bonus = 4;
+                bonusMaterial.SetTexture(MainTex, commonTexture);
+            }
+            else if (extraPoints < 9)
+            {
+                bonus = 6;
+                bonusMaterial.SetTexture(MainTex, uncommonTexture);
+            }
+            else
+            {
+                bonus = 8;
+                bonusMaterial.SetTexture(MainTex, rareTexture);
+            }
+        }
+
+        Debug.Log($"GameplayManager BonusPointRandomizer getting {bonus} extra points");
+        return bonus;
     }
 }

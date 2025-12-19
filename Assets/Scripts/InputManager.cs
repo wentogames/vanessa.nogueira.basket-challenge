@@ -15,24 +15,33 @@ public class InputManager : MonoBehaviour
     private float _ballYPos = -200f;
     private float _fillAmount = 0;
 
+    private bool _canLoadToThrow = true;
     private bool _loading = false;
     private float _initialLoadingTime = 0;
+    
+    private Vector2 _initialClickPositionNormalized;
+    private Vector2 _initialClickPositionRaw;
+    private float _yDrag;
+    private float _xDrag;
+
+    private Vector3 _currentPosNormalized;
+    private Vector3 _currentPosRaw;
+    
     private const float MinFill = 0.15f; //from 0 to 1
     private const float MaxDragTime = 1f;
     private const float BallMeterMultiplier = 1800f;
     private const float ClickLoadMultiplier = 12f;
+    private const float ClickXDirectionMultiplier = 0.085f;
 
     private const float BallMobileMeterMultiplier = 1800f;
     private const float TouchMobileLoadMultiplier = 15f;
+    private const float ClickMobileXDirectionMultiplier = 0.03f;
     
     private const float BallInitialYPos = -200f;
     private const float FillInitialYPos = 0;
+    private const float BallMaxXPosition = 15;
 
-    private Vector2 _initialClickPosition;
-    private float _yDrag;
-    private float _xDrag;
 
-    
     private void Start()
     {
         #if UNITY_STANDALONE_WIN
@@ -50,10 +59,10 @@ public class InputManager : MonoBehaviour
         if (Input.GetMouseButtonDown(0))
         {
             _initialLoadingTime = Time.time;
-            _initialClickPosition = Input.mousePosition.normalized;
+            _initialClickPositionNormalized = Input.mousePosition.normalized;
+            _initialClickPositionRaw = Input.mousePosition;
             _loading = true;
-            
-            Debug.Log($"InputManager GetMouseButtonDown. Click pos: {_initialClickPosition}");
+            //Debug.Log($"InputManager GetMouseButtonDown. Click pos: {_initialClickPosition}");
         }
 
         if (Input.GetMouseButton(0))
@@ -64,16 +73,20 @@ public class InputManager : MonoBehaviour
                 _loading = false;
             }
 
-            var currentPos = Input.mousePosition.normalized;
-            if (_loading)
+            _currentPosNormalized = Input.mousePosition.normalized;
+            if (_loading && _canLoadToThrow)
             {
-                if (currentPos.y > _initialClickPosition.y)
+                if (_currentPosNormalized.y > _initialClickPositionNormalized.y)
                 {
-                    _fillAmount += (currentPos.y - _initialClickPosition.y) * (Time.deltaTime * ClickLoadMultiplier);
+                    _fillAmount += (_currentPosNormalized.y - _initialClickPositionNormalized.y) * (Time.deltaTime * ClickLoadMultiplier);
                     _ballYPos += _fillAmount * (Time.deltaTime * BallMeterMultiplier);
                     MoveMeter(_fillAmount);
                 }
             }
+
+            _currentPosRaw = Input.mousePosition;
+            float throwDirectionX = (_currentPosRaw.x - _initialClickPositionRaw.x);
+            MoveMeterX(throwDirectionX);
         }
 
         if (Input.GetMouseButtonUp(0))
@@ -82,10 +95,15 @@ public class InputManager : MonoBehaviour
             
             if (meterFill.fillAmount < MinFill) return;
             
-            GameplayManager.ForceAmount?.Invoke(meterFill.fillAmount);
-            Debug.Log($"InputManager GetMouseButtonUp meterFill.fillAmount {meterFill.fillAmount}");
+            _canLoadToThrow = false;
+            
+            _currentPosRaw = Input.mousePosition;
+            float throwDirectionX = (_currentPosRaw.x - _initialClickPositionRaw.x);
+            Debug.Log($"InputManager x final position: {throwDirectionX}");
+            
+            GameplayManager.ForceAmount?.Invoke(meterFill.fillAmount, (throwDirectionX * ClickXDirectionMultiplier));
+            //Debug.Log($"InputManager GetMouseButtonUp meterFill.fillAmount {meterFill.fillAmount}");
         }
-        
 #else
         if (Input.touchCount > 0)
         {
@@ -94,10 +112,11 @@ public class InputManager : MonoBehaviour
             if (touch.phase == TouchPhase.Began)
             {
                 _initialLoadingTime = Time.time;
-                _initialClickPosition = touch.position.normalized;
+                _initialClickPositionNormalized = touch.position.normalized;
+                _initialClickPositionRaw = touch.position;
                 _loading = true;
             
-                Debug.Log($"InputManager TouchPhase.Began. Click pos: {_initialClickPosition}");
+                Debug.Log($"InputManager TouchPhase.Began. Click pos: {_initialClickPositionNormalized}");
             }
             else if (touch.phase == TouchPhase.Moved)
             {
@@ -108,23 +127,33 @@ public class InputManager : MonoBehaviour
                 }
 
                 var currentPos = touch.position.normalized;
-                if (_loading)
+                if (_loading && _canLoadToThrow)
                 {
-                    if (currentPos.y > _initialClickPosition.y)
+                    if (currentPos.y > _initialClickPositionNormalized.y)
                     {
-                        _fillAmount += (currentPos.y - _initialClickPosition.y) * (Time.deltaTime * TouchMobileLoadMultiplier);
+                        _fillAmount += (currentPos.y - _initialClickPositionNormalized.y) * (Time.deltaTime * TouchMobileLoadMultiplier);
                         _ballYPos += _fillAmount * (Time.deltaTime * BallMobileMeterMultiplier);
                         MoveMeter(_fillAmount);
                     }
                 }
+                
+                _currentPosRaw = Input.mousePosition;
+                float throwDirectionX = (_currentPosRaw.x - _initialClickPositionRaw.x);
+                MoveMeterX(throwDirectionX);
             }
             else if (touch.phase == TouchPhase.Ended)
             {
                 _loading = false;
             
                 if (meterFill.fillAmount < MinFill) return;
+                
+                _canLoadToThrow = false;
             
-                GameplayManager.ForceAmount?.Invoke(meterFill.fillAmount);
+                _currentPosRaw = touch.position;
+                float throwDirectionX = (_currentPosRaw.x - _initialClickPositionRaw.x);
+                Debug.Log($"InputManager x final position: {throwDirectionX}");
+            
+                GameplayManager.ForceAmount?.Invoke(meterFill.fillAmount, (throwDirectionX * ClickXDirectionMultiplier));
                 Debug.Log($"InputManager TouchPhase.Ended meterFill.fillAmount {meterFill.fillAmount}");
             }
         }
@@ -146,10 +175,23 @@ public class InputManager : MonoBehaviour
         meterBall.anchoredPosition = new Vector2(0, yPosition);
     }
 
+    private void MoveMeterX(float xValue)
+    {
+        float xPosition = (xValue * ClickXDirectionMultiplier);
+        if (Mathf.Abs(xPosition) > BallMaxXPosition)
+        {
+            xPosition = xPosition > 0 ? BallMaxXPosition : -BallMaxXPosition;
+        }
+        
+        meterBall.anchoredPosition = new Vector2(xPosition, meterBall.anchoredPosition.y);
+    }
+
     public void ResetMeter()
     {
         _fillAmount = FillInitialYPos;
         _ballYPos = BallInitialYPos;
         MoveMeter(FillInitialYPos);
+        MoveMeterX(FillInitialYPos);
+        _canLoadToThrow = true;
     }
 }
