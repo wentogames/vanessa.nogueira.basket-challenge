@@ -84,7 +84,7 @@ public class GameplayManager : MonoBehaviour
         ForceAmount += ThrowBall;
         StopCameraBall += () => StartCoroutine(StopFollowingBall());
         MatchStarted += StartMatch;
-        MatchStopped += StopMatch;
+        MatchStopped += () => StartCoroutine(StopMatch());
         RandomizePosition();
     }
 
@@ -103,9 +103,11 @@ public class GameplayManager : MonoBehaviour
         Debug.Log($"GameplayManager StartMatch");
     }
 
-    private void StopMatch()
+    private IEnumerator StopMatch()
     {
         _isRunning = false;
+        yield return new WaitForSeconds(1f);
+        ScreenManager.OnShowRewards?.Invoke();
         ResetAll();
         Debug.Log($"GameplayManager StopMatch");
     }

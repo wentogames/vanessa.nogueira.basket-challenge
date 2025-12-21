@@ -28,6 +28,8 @@ public class ScreenManager : MonoBehaviour
     private const float Margin = 300f;
     private const float AnimDuration = 1f;
     private const float ScreenSizeThreshold = 50f;
+    
+    public static Action OnShowRewards;
 
     private void Start()
     {
@@ -35,6 +37,8 @@ public class ScreenManager : MonoBehaviour
         SetMeasures();
 
         screensRT[(int)Screens.MainMenu].DOMove(_finalPosition, AnimDuration, true);
+
+        OnShowRewards += ShowRewards;
     }
 
     private void Update()
@@ -90,8 +94,14 @@ public class ScreenManager : MonoBehaviour
     {
         if (screen == Screens.Gameplay.ToString())
         {
+            ScoreManager.OnResetTexts?.Invoke();
             InputManager.OnGameplayScreen?.Invoke();
         }
+    }
+
+    private void ShowRewards()
+    {
+        OpenScreen(screensRT[(int)Screens.Reward]);
     }
 
     public void CloseAllScreens()
