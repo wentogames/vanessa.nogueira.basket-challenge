@@ -42,6 +42,9 @@ public class GameplayManager : MonoBehaviour
     private bool _firstThrow = true;
     private int _bonusPoints = 0;
 
+    private bool _canStartMatch = false;
+    private bool _isRunning = false;
+
     private readonly Dictionary<Vector3, Vector3> _positionRotationDict = new Dictionary<Vector3, Vector3>()
     {
         { new Vector3(0, 0, 3.85f), Vector3.zero },
@@ -64,8 +67,9 @@ public class GameplayManager : MonoBehaviour
     public static Action BackboardTouched;
     public static Action ThrowEnd;
     public static Action<float, float> ForceAmount;
-
     public static Action StopCameraBall;
+    public static Action MatchStarted;
+    public static Action MatchStopped;
 
 
     // Start is called before the first frame update
@@ -78,6 +82,8 @@ public class GameplayManager : MonoBehaviour
         ThrowEnd += Outcome;
         ForceAmount += ThrowBall;
         StopCameraBall += StopFollowingBall;
+        MatchStarted += StartMatch;
+        MatchStopped += StopMatch;
         RandomizePosition();
     }
 
@@ -87,6 +93,19 @@ public class GameplayManager : MonoBehaviour
         {
             Debug.Log("GameplayManager Wrong shot (time out)!");
         }
+    }
+
+    private void StartMatch()
+    {
+        TimerManager.MatchStarted?.Invoke();
+        _isRunning = true;
+        Debug.Log($"GameplayManager StartMatch");
+    }
+
+    private void StopMatch()
+    {
+        _isRunning = false;
+        Debug.Log($"GameplayManager StopMatch");
     }
 
     private void RandomizePosition()
@@ -112,7 +131,7 @@ public class GameplayManager : MonoBehaviour
     
     private void ThrowBall(float force, float xForce)
     {
-        if (!_canLoadToThrow) return;
+        if (!_canLoadToThrow || !_isRunning) return;
         basketBallRb.constraints = RigidbodyConstraints.None;
         _ballThrew = true;
         _throwTime = Time.time;
@@ -185,6 +204,8 @@ public class GameplayManager : MonoBehaviour
 
     public void Reset()
     {
+        _isRunning = false;
+        _canStartMatch = true;
         _canLoadToThrow = true;
         _ballThrew = false;
         _ballEntered = false;

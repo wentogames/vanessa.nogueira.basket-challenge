@@ -84,6 +84,11 @@ public class ScreenManager : MonoBehaviour
         
         screen.gameObject.SetActive(true);
         screen.transform.DOMove(_finalPosition, AnimDuration, true);
+
+        if (screen.gameObject.name == Screens.Gameplay.ToString())
+        {
+            
+        }
     }
 
     public void CloseAllScreens()
