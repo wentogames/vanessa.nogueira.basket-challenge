@@ -83,11 +83,14 @@ public class ScreenManager : MonoBehaviour
         }
         
         screen.gameObject.SetActive(true);
-        screen.transform.DOMove(_finalPosition, AnimDuration, true);
+        screen.transform.DOMove(_finalPosition, AnimDuration, true).OnComplete(() => IsOnGameplayScreen(screen.gameObject.name));
+    }
 
-        if (screen.gameObject.name == Screens.Gameplay.ToString())
+    private void IsOnGameplayScreen(string screen)
+    {
+        if (screen == Screens.Gameplay.ToString())
         {
-            
+            InputManager.OnGameplayScreen?.Invoke();
         }
     }
 

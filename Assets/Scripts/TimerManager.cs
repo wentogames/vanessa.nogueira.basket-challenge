@@ -40,6 +40,7 @@ public class TimerManager : MonoBehaviour
 
     private void StopMatch()
     {
+        Debug.Log($"TimerManager StopMatch");
         _isRunning = false;
         GameplayManager.MatchStopped?.Invoke();
     }

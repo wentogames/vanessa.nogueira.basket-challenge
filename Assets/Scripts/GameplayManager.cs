@@ -44,6 +44,7 @@ public class GameplayManager : MonoBehaviour
 
     private bool _canStartMatch = false;
     private bool _isRunning = false;
+    private bool _canResetThrow = false;
 
     private readonly Dictionary<Vector3, Vector3> _positionRotationDict = new Dictionary<Vector3, Vector3>()
     {
@@ -81,7 +82,7 @@ public class GameplayManager : MonoBehaviour
         BackboardTouched += BackboardTouch;
         ThrowEnd += Outcome;
         ForceAmount += ThrowBall;
-        StopCameraBall += StopFollowingBall;
+        StopCameraBall += () => StartCoroutine(StopFollowingBall());
         MatchStarted += StartMatch;
         MatchStopped += StopMatch;
         RandomizePosition();
@@ -105,6 +106,7 @@ public class GameplayManager : MonoBehaviour
     private void StopMatch()
     {
         _isRunning = false;
+        ResetAll();
         Debug.Log($"GameplayManager StopMatch");
     }
 
@@ -141,6 +143,7 @@ public class GameplayManager : MonoBehaviour
         basketBallRb.AddRelativeForce(directionForce * (force * ClickDragMultiplier));
         ChangeCamera(true);
         _canLoadToThrow = false;
+        _canResetThrow = true;
     }
 
     private void RingTouch()
@@ -191,9 +194,12 @@ public class GameplayManager : MonoBehaviour
         _ballThrew = false;
     }
 
-    private void StopFollowingBall()
+    private IEnumerator StopFollowingBall()
     {
         ballCamera.transform.SetParent(player.transform);
+
+        yield return new WaitForSeconds(1f);
+        ResetThrow();
     }
 
     private void ChangeCamera(bool toBallCamera)
@@ -202,10 +208,9 @@ public class GameplayManager : MonoBehaviour
         ballCamera.SetActive(toBallCamera);
     }
 
-    public void Reset()
+    private void ResetThrow()
     {
-        _isRunning = false;
-        _canStartMatch = true;
+        if (!_canResetThrow) return;
         _canLoadToThrow = true;
         _ballThrew = false;
         _ballEntered = false;
@@ -215,8 +220,16 @@ public class GameplayManager : MonoBehaviour
         ballCamera.transform.SetParent(basketBall.transform);
         ballCamera.transform.localPosition = _ballCameraInitialPosition;
         ballCamera.transform.localRotation = Quaternion.Euler(_ballCameraInitialRotation);
-
+        InputManager.OnReset?.Invoke();
         _bonusPoints = BonusPointRandomizer();
+        _canResetThrow = false;
+    }
+
+    public void ResetAll()
+    {
+        _isRunning = false;
+        _canStartMatch = true;
+        ResetThrow();
     }
 
     private int BonusPointRandomizer()

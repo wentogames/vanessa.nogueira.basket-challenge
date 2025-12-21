@@ -24,7 +24,7 @@ public class InputManager : MonoBehaviour
     private float _yDrag;
     private float _xDrag;
     
-    private bool _canStartMatch = true;
+    private bool _canStartMatch = false;
 
     private Vector3 _currentPosNormalized;
     private Vector3 _currentPosRaw;
@@ -44,10 +44,12 @@ public class InputManager : MonoBehaviour
     private const float BallMaxXPosition = 15;
 
     public static Action OnGameplayScreen;
+    public static Action OnReset;
 
     private void Start()
     {
         OnGameplayScreen += ResetMatch;
+        OnReset += ResetMeter;
     }
 
     void Update()

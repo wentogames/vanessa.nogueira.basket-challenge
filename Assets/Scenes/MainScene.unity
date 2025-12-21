@@ -598,7 +598,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 0:00
+  m_text: 2:00
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 015a75a804bde6d4595b3700fb659146, type: 2}
   m_sharedMaterial: {fileID: -7008941211511765336, guid: 015a75a804bde6d4595b3700fb659146, type: 2}
@@ -1222,6 +1222,10 @@ PrefabInstance:
     - target: {fileID: 8091214320417738767, guid: 2da32b122a1823b43bd391491d78dd7f, type: 3}
       propertyPath: m_Name
       value: Button
+      objectReference: {fileID: 0}
+    - target: {fileID: 8091214320417738767, guid: 2da32b122a1823b43bd391491d78dd7f, type: 3}
+      propertyPath: m_IsActive
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 2da32b122a1823b43bd391491d78dd7f, type: 3}
