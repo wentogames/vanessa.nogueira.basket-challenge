@@ -59,8 +59,9 @@ public class GameplayManager : MonoBehaviour
 
 
     private const float ClickDragMultiplier = 14.28f; //ThrowForceMultiplier divided by the 0.7 of the fillAmount meter
-    private const float MaxThrowDuration = 2.5f;
+    private const float MaxThrowDuration = 3f;
     private const int InitialPosition = 0;
+    private const float EndThrowDelay = 1.5f;
     private const string MainTex = "_MainTex";
 
     public static Action BallEntered;
@@ -84,7 +85,7 @@ public class GameplayManager : MonoBehaviour
         ForceAmount += ThrowBall;
         StopCameraBall += () => StartCoroutine(StopFollowingBall());
         MatchStarted += StartMatch;
-        MatchStopped += () => StartCoroutine(StopMatch());
+        MatchStopped += StopMatch;
         RandomizePosition();
     }
 
@@ -103,13 +104,13 @@ public class GameplayManager : MonoBehaviour
         Debug.Log($"GameplayManager StartMatch");
     }
 
-    private IEnumerator StopMatch()
+    private void StopMatch()
     {
-        _isRunning = false;
-        yield return new WaitForSeconds(1f);
+        Debug.Log($"GameplayManager StopMatch begin");
+        //yield return new WaitForSeconds(EndThrowDelay);
         ScreenManager.OnShowRewards?.Invoke();
         ResetAll();
-        Debug.Log($"GameplayManager StopMatch");
+        Debug.Log($"GameplayManager StopMatch end");
     }
 
     private void RandomizePosition()
@@ -200,7 +201,7 @@ public class GameplayManager : MonoBehaviour
     {
         ballCamera.transform.SetParent(player.transform);
 
-        yield return new WaitForSeconds(1f);
+        yield return new WaitForSeconds(EndThrowDelay);
         ResetThrow();
     }
 
@@ -217,6 +218,7 @@ public class GameplayManager : MonoBehaviour
         _ballThrew = false;
         _ballEntered = false;
         _ringTouched = false;
+        _backboardTouched = false;
         RandomizePosition();
         basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
         ballCamera.transform.SetParent(basketBall.transform);
@@ -225,12 +227,15 @@ public class GameplayManager : MonoBehaviour
         InputManager.OnReset?.Invoke();
         _bonusPoints = BonusPointRandomizer();
         _canResetThrow = false;
+        StopAllCoroutines();
     }
 
-    public void ResetAll()
+    private void ResetAll()
     {
         _isRunning = false;
         _canStartMatch = true;
+        InputManager.OnReset?.Invoke();
+        TimerManager.OnResetMatch?.Invoke();
         ResetThrow();
     }
 

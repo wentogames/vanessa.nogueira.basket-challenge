@@ -11,10 +11,12 @@ public class TimerManager : MonoBehaviour
     private bool _isRunning = false;
 
     public static Action MatchStarted;
+    public static Action OnResetMatch;
 
     private void Start()
     {
         MatchStarted += StartMatch;
+        OnResetMatch += ResetTimer;
     }
 
     private void Update()
@@ -35,14 +37,13 @@ public class TimerManager : MonoBehaviour
     {
         Debug.Log($"TimerManager StartMatch");
         _isRunning = true;
-        ResetTimer();
     }
 
     private void StopMatch()
     {
-        Debug.Log($"TimerManager StopMatch");
         _isRunning = false;
         GameplayManager.MatchStopped?.Invoke();
+        Debug.Log($"TimerManager StopMatch");
     }
 
     private void ResetTimer()

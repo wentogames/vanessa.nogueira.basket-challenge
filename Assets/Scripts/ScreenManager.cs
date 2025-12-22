@@ -11,7 +11,6 @@ public enum Screens
     MainMenu = 0,
     Gameplay = 1,
     Reward = 2,
-    PlayAgainOrMain = 3
 }
 
 public class ScreenManager : MonoBehaviour
@@ -38,7 +37,7 @@ public class ScreenManager : MonoBehaviour
 
         screensRT[(int)Screens.MainMenu].DOMove(_finalPosition, AnimDuration, true);
 
-        OnShowRewards += ShowRewards;
+        OnShowRewards += OpenRewardsScreen;
     }
 
     private void Update()
@@ -77,38 +76,47 @@ public class ScreenManager : MonoBehaviour
         screen.sizeDelta = new Vector2(_screenWidth, _screenHeight);
         screen.pivot = new Vector2(0.5f, 0.5f);
         screen.anchoredPosition = new Vector2(0, (-_screenHeight -Margin));
+        Debug.Log($"ScreenManager SetInitialPosition");
     }
 
-    public void OpenScreen(RectTransform screen)
+    public void OpenGameplayScreen()
     {
-        if (screen.anchoredPosition != _initialPosition)
+        Debug.Log($"ScreenManager OpenGameplayScreen");
+        CloseAllScreens();
+        screensRT[(int)Screens.Gameplay].gameObject.SetActive(true);
+        screensRT[(int)Screens.Gameplay].DOMove(_finalPosition, AnimDuration, true).OnComplete(() =>
         {
-            SetInitialPosition(screen);
-        }
-        
-        screen.gameObject.SetActive(true);
-        screen.transform.DOMove(_finalPosition, AnimDuration, true).OnComplete(() => IsOnGameplayScreen(screen.gameObject.name));
-    }
-
-    private void IsOnGameplayScreen(string screen)
-    {
-        if (screen == Screens.Gameplay.ToString())
-        {
+            screensRT[(int)Screens.Reward].gameObject.SetActive(false);
             ScoreManager.OnResetTexts?.Invoke();
             InputManager.OnGameplayScreen?.Invoke();
-        }
+        });
     }
 
-    private void ShowRewards()
+    public void OpenRewardsScreen()
     {
-        OpenScreen(screensRT[(int)Screens.Reward]);
+        Debug.Log($"ScreenManager OpenRewardsScreen");
+        screensRT[(int)Screens.Reward].gameObject.SetActive(true);
+        screensRT[(int)Screens.Reward].DOMove(_finalPosition, AnimDuration, true).OnComplete(() =>
+        {
+            Debug.Log($"ScreenManager OpenRewardsScreen closing Gameplay screen");
+            screensRT[(int)Screens.Gameplay].gameObject.SetActive(false);
+        });
     }
 
     public void CloseAllScreens()
     {
+        if (screensRT[(int)Screens.MainMenu].anchoredPosition != _initialPosition)
+        {
+            SetInitialPosition(screensRT[(int)Screens.MainMenu]);
+        }
+        
         foreach (var screen in screensRT)
         {
-            screen.gameObject.SetActive(false);
+            Debug.Log($"ScreenManager CloseAllScreens screen name {screen.name}");
+            if(screen.name != Screens.MainMenu.ToString())
+            {
+                screen.gameObject.SetActive(false);
+            }
         }
     }
 }

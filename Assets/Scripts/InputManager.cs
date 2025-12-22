@@ -33,7 +33,7 @@ public class InputManager : MonoBehaviour
     private const float MaxDragTime = 1f;
     private const float BallMeterMultiplier = 1800f;
     private const float ClickLoadMultiplier = 12f;
-    private const float ClickXDirectionMultiplier = 0.085f;
+    private const float ClickXDirectionMultiplier = 0.05f;
 
     private const float BallMobileMeterMultiplier = 1800f;
     private const float TouchMobileLoadMultiplier = 15f;

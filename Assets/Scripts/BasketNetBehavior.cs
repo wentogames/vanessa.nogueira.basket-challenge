@@ -17,11 +17,6 @@ public class BasketNetBehavior : MonoBehaviour
         _netCollider = GetComponent<CapsuleCollider>();
     }
 
-    void Update()
-    {
-        
-    }
-
     private void OnTriggerEnter(Collider other)
     {
         if (other.gameObject.CompareTag(Ball))
