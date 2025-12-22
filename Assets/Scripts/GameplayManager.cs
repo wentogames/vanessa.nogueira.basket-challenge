@@ -42,6 +42,10 @@ public class GameplayManager : MonoBehaviour
     private bool _firstThrow = true;
     private int _bonusPoints = 0;
 
+    private bool _canStartMatch = false;
+    private bool _isRunning = false;
+    private bool _canResetThrow = false;
+
     private readonly Dictionary<Vector3, Vector3> _positionRotationDict = new Dictionary<Vector3, Vector3>()
     {
         { new Vector3(0, 0, 3.85f), Vector3.zero },
@@ -55,8 +59,9 @@ public class GameplayManager : MonoBehaviour
 
 
     private const float ClickDragMultiplier = 14.28f; //ThrowForceMultiplier divided by the 0.7 of the fillAmount meter
-    private const float MaxThrowDuration = 2.5f;
+    private const float MaxThrowDuration = 3f;
     private const int InitialPosition = 0;
+    private const float EndThrowDelay = 1.5f;
     private const string MainTex = "_MainTex";
 
     public static Action BallEntered;
@@ -64,8 +69,9 @@ public class GameplayManager : MonoBehaviour
     public static Action BackboardTouched;
     public static Action ThrowEnd;
     public static Action<float, float> ForceAmount;
-
     public static Action StopCameraBall;
+    public static Action MatchStarted;
+    public static Action MatchStopped;
 
 
     // Start is called before the first frame update
@@ -77,7 +83,9 @@ public class GameplayManager : MonoBehaviour
         BackboardTouched += BackboardTouch;
         ThrowEnd += Outcome;
         ForceAmount += ThrowBall;
-        StopCameraBall += StopFollowingBall;
+        StopCameraBall += () => StartCoroutine(StopFollowingBall());
+        MatchStarted += StartMatch;
+        MatchStopped += StopMatch;
         RandomizePosition();
     }
 
@@ -87,6 +95,22 @@ public class GameplayManager : MonoBehaviour
         {
             Debug.Log("GameplayManager Wrong shot (time out)!");
         }
+    }
+
+    private void StartMatch()
+    {
+        TimerManager.MatchStarted?.Invoke();
+        _isRunning = true;
+        Debug.Log($"GameplayManager StartMatch");
+    }
+
+    private void StopMatch()
+    {
+        Debug.Log($"GameplayManager StopMatch begin");
+        //yield return new WaitForSeconds(EndThrowDelay);
+        ScreenManager.OnShowRewards?.Invoke();
+        ResetAll();
+        Debug.Log($"GameplayManager StopMatch end");
     }
 
     private void RandomizePosition()
@@ -112,7 +136,7 @@ public class GameplayManager : MonoBehaviour
     
     private void ThrowBall(float force, float xForce)
     {
-        if (!_canLoadToThrow) return;
+        if (!_canLoadToThrow || !_isRunning) return;
         basketBallRb.constraints = RigidbodyConstraints.None;
         _ballThrew = true;
         _throwTime = Time.time;
@@ -122,6 +146,7 @@ public class GameplayManager : MonoBehaviour
         basketBallRb.AddRelativeForce(directionForce * (force * ClickDragMultiplier));
         ChangeCamera(true);
         _canLoadToThrow = false;
+        _canResetThrow = true;
     }
 
     private void RingTouch()
@@ -172,9 +197,12 @@ public class GameplayManager : MonoBehaviour
         _ballThrew = false;
     }
 
-    private void StopFollowingBall()
+    private IEnumerator StopFollowingBall()
     {
         ballCamera.transform.SetParent(player.transform);
+
+        yield return new WaitForSeconds(EndThrowDelay);
+        ResetThrow();
     }
 
     private void ChangeCamera(bool toBallCamera)
@@ -183,19 +211,32 @@ public class GameplayManager : MonoBehaviour
         ballCamera.SetActive(toBallCamera);
     }
 
-    public void Reset()
+    private void ResetThrow()
     {
+        if (!_canResetThrow) return;
         _canLoadToThrow = true;
         _ballThrew = false;
         _ballEntered = false;
         _ringTouched = false;
+        _backboardTouched = false;
         RandomizePosition();
         basketBallRb.constraints = RigidbodyConstraints.FreezeAll;
         ballCamera.transform.SetParent(basketBall.transform);
         ballCamera.transform.localPosition = _ballCameraInitialPosition;
         ballCamera.transform.localRotation = Quaternion.Euler(_ballCameraInitialRotation);
-
+        InputManager.OnReset?.Invoke();
         _bonusPoints = BonusPointRandomizer();
+        _canResetThrow = false;
+        StopAllCoroutines();
+    }
+
+    private void ResetAll()
+    {
+        _isRunning = false;
+        _canStartMatch = true;
+        InputManager.OnReset?.Invoke();
+        TimerManager.OnResetMatch?.Invoke();
+        ResetThrow();
     }
 
     private int BonusPointRandomizer()

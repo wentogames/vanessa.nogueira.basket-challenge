@@ -23,6 +23,8 @@ public class InputManager : MonoBehaviour
     private Vector2 _initialClickPositionRaw;
     private float _yDrag;
     private float _xDrag;
+    
+    private bool _canStartMatch = false;
 
     private Vector3 _currentPosNormalized;
     private Vector3 _currentPosRaw;
@@ -31,7 +33,7 @@ public class InputManager : MonoBehaviour
     private const float MaxDragTime = 1f;
     private const float BallMeterMultiplier = 1800f;
     private const float ClickLoadMultiplier = 12f;
-    private const float ClickXDirectionMultiplier = 0.085f;
+    private const float ClickXDirectionMultiplier = 0.05f;
 
     private const float BallMobileMeterMultiplier = 1800f;
     private const float TouchMobileLoadMultiplier = 15f;
@@ -41,16 +43,14 @@ public class InputManager : MonoBehaviour
     private const float FillInitialYPos = 0;
     private const float BallMaxXPosition = 15;
 
+    public static Action OnGameplayScreen;
+    public static Action OnReset;
 
     private void Start()
     {
-        #if UNITY_STANDALONE_WIN
-        
-        #else
-        
-        #endif
+        OnGameplayScreen += ResetMatch;
+        OnReset += ResetMeter;
     }
-
 
     void Update()
     {
@@ -91,6 +91,13 @@ public class InputManager : MonoBehaviour
 
         if (Input.GetMouseButtonUp(0))
         {
+            if (_canStartMatch)
+            {
+                Debug.Log($"InputManager starting match");
+                GameplayManager.MatchStarted?.Invoke();
+                _canStartMatch = false;
+            }
+            
             _loading = false;
             
             if (meterFill.fillAmount < MinFill) return;
@@ -143,6 +150,13 @@ public class InputManager : MonoBehaviour
             }
             else if (touch.phase == TouchPhase.Ended)
             {
+                if (_canStartMatch)
+                {
+                    Debug.Log($"InputManager starting match");
+                    GameplayManager.MatchStarted?.Invoke();
+                    _canStartMatch = false;
+                }
+
                 _loading = false;
             
                 if (meterFill.fillAmount < MinFill) return;
@@ -157,7 +171,6 @@ public class InputManager : MonoBehaviour
                 Debug.Log($"InputManager TouchPhase.Ended meterFill.fillAmount {meterFill.fillAmount}");
             }
         }
-        
 #endif
     }
 
@@ -186,6 +199,11 @@ public class InputManager : MonoBehaviour
         meterBall.anchoredPosition = new Vector2(xPosition, meterBall.anchoredPosition.y);
     }
 
+    private void ResetMatch()
+    {
+        _canStartMatch = true;
+    }
+    
     public void ResetMeter()
     {
         _fillAmount = FillInitialYPos;
