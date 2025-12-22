@@ -42,6 +42,7 @@ public class ScreenManager : MonoBehaviour
 
     private void Update()
     {
+#if UNITY_ANDROID
         if (Math.Abs(_screenWidth - Screen.width) > ScreenSizeThreshold || Math.Abs(_screenHeight - Screen.height) > ScreenSizeThreshold)
         {
             SetMeasures();
@@ -55,12 +56,19 @@ public class ScreenManager : MonoBehaviour
                 }
             }
         }
+#endif
     }
 
     private void SetMeasures()
     {
+#if UNITY_ANDROID || UNITY_EDITOR
         _screenWidth = Screen.width;
         _screenHeight = Screen.height;
+#else
+        _screenWidth = 498f;
+        _screenHeight = 1080f;
+#endif
+
         _initialPosition = new Vector2(0, (-_screenHeight -Margin));
         _finalPosition = new Vector2(_screenWidth/2, _screenHeight/2);
         Debug.Log($"ScreenManager SetMeasures width: {_screenWidth}, height: {_screenHeight}");
@@ -98,9 +106,18 @@ public class ScreenManager : MonoBehaviour
         screensRT[(int)Screens.Reward].gameObject.SetActive(true);
         screensRT[(int)Screens.Reward].DOMove(_finalPosition, AnimDuration, true).OnComplete(() =>
         {
-            Debug.Log($"ScreenManager OpenRewardsScreen closing Gameplay screen");
-            screensRT[(int)Screens.Gameplay].gameObject.SetActive(false);
+            StartCoroutine(ReturnToMainMenu());
         });
+    }
+
+    private IEnumerator ReturnToMainMenu()
+    {
+        yield return new WaitForSeconds(3f);
+        CloseAllScreens();
+        screensRT[(int)Screens.MainMenu].DOMove(_finalPosition, AnimDuration, true);
+        ScoreManager.OnResetTexts?.Invoke();
+        TimerManager.OnResetMatch?.Invoke();
+        InputManager.OnReset?.Invoke();
     }
 
     public void CloseAllScreens()
